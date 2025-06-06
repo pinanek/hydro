@@ -36,22 +36,24 @@ end
 
 function _hydro_who
     set --local show_hostname false
+    set --local suffix ""
     if set --query SSH_CONNECTION
         set show_hostname true
+        set suffix "$suffix (SSH)"
     else
         switch (uname)
-        case Linux
-            if test -r /proc/1/environ && grep -qa container=lxc /proc/1/environ
-                set show_hostname true
-            end
-        case FreeBSD
-            if test "$(sysctl -n security.jail.jailed)" = "1"
-                set show_hostname true
-            end
-        case SunOS
-            if test "$(zonename)" != "global"
-                set show_hostname true
-            end
+            case Linux
+                if test -r /proc/1/environ && grep -qa container=lxc /proc/1/environ
+                    set show_hostname true
+                end
+            case FreeBSD
+                if test "$(sysctl -n security.jail.jailed)" = 1
+                    set show_hostname true
+                end
+            case SunOS
+                if test "$(zonename)" != global
+                    set show_hostname true
+                end
         end
     end
 
@@ -59,9 +61,9 @@ function _hydro_who
         set --local short_host (
             string split --fields 1 . $hostname
         )
-        set --global _hydro_who "$USER@$short_host "
+        set --global _hydro_who "$USER@$short_host$suffix "
     else if test "$hydro_always_show_user" = true
-        set --global _hydro_who "$USER "
+        set --global _hydro_who "$USER$suffix "
     else
         set --global _hydro_who ""
     end
@@ -107,7 +109,7 @@ function _hydro_prompt --on-event fish_prompt
         _hydro_pwd
     end
 
-    if ! set --query _hydro_git_root[1] || contains -- "$_hydro_git_root" $hydro_ignored_git_paths 
+    if ! set --query _hydro_git_root[1] || contains -- "$_hydro_git_root" $hydro_ignored_git_paths
         set $_hydro_git
         return
     end
